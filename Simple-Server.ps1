@@ -1,4 +1,4 @@
-﻿## Powershell For Penetration Testers Exam Task 7 - Write a simple web server in PowerShell which could be used to list, delete, download and upload files over HTTP
+## Powershell For Penetration Testers Exam Task 7 - Write a simple web server in PowerShell which could be used to list, delete, download and upload files over HTTP
 function Start-Simple-WebServer
 { 
 <#
@@ -52,7 +52,8 @@ $HttpListener.Start()
 $Upload = @"
 <html><body>
 	<form method="POST" enctype="multipart/form-data" action="/upload">
-	<p><b>File to upload:</b><input type="file" name="filedata"></p>	<input type="submit" name="button" value="Upload">
+	<p><b>File to upload:</b><input type="file" name="filedata"></p>
+	<input type="submit" name="button" value="Upload">
 	</form>
 </body></html>
 "@
@@ -104,16 +105,96 @@ While ($HttpListener.IsListening) {
         }
       
 
-        "GET /upload" {$ResponseBuffer = [System.Text.Encoding]::UTF8.GetBytes($upload)}        "GET /stop" {$HttpResponse.Close()        $HttpListener.Stop()        return}        
+        "GET /upload" {$ResponseBuffer = [System.Text.Encoding]::UTF8.GetBytes($upload)}
+
+        "GET /stop" {$HttpResponse.Close()
+        $HttpListener.Stop()
+        return}
+        
            #Upload functionality inspired by: https://gallery.technet.microsoft.com/scriptcenter/Powershell-Webserver-74dcf466
-        	"POST /upload"
-			{ # upload file
-				# only if there is body data in the request				if ($HttpRequest.HasEntityBody)				{					# set default message to error message (since we just stop processing on error)					$ResponseBuffer = "Received corrupt or incomplete form data"					# check content type
-					if ($HttpRequest.ContentType)					{						# retrieve boundary marker for header separation						$BOUNDARY = $NULL						if ($HttpRequest.ContentType -match "boundary=(.*);")						{	$BOUNDARY = "--" + $MATCHES[1] }						else						{ # marker might be at the end of the line							if ($HttpRequest.ContentType -match "boundary=(.*)$")							{ $BOUNDARY = "--" + $MATCHES[1] }						}						if ($BOUNDARY)						{ # only if header separator was found							# read complete header (inkl. file data) into string							$READER = New-Object System.IO.StreamReader($HttpRequest.InputStream, $HttpRequest.ContentEncoding)							$DATA = $READER.ReadToEnd()							$READER.Close()							$HttpRequest.InputStream.Close()							# variables for filenames							$FILENAME = ""							$SOURCENAME = ""							# separate headers by boundary string							$DATA -replace "$BOUNDARY--\r\n", "$BOUNDARY`r`n--" -split "$BOUNDARY\r\n" | % {
-								# omit leading empty header and end marker header								if (($_ -ne "") -and ($_ -ne "--"))								{									# only if well defined header (seperation between meta data and data)									if ($_.IndexOf("`r`n`r`n") -gt 0)									{										# header data before two CRs is meta data										# first look for the file in header "filedata"										if ($_.Substring(0, $_.IndexOf("`r`n`r`n")) -match "Content-Disposition: form-data; name=(.*);")										{											$HEADERNAME = $MATCHES[1] -replace '\"'											# headername "filedata"?											if ($HEADERNAME -eq "filedata")											{ # yes, look for source filename												if ($_.Substring(0, $_.IndexOf("`r`n`r`n")) -match "filename=(.*)")												{ # source filename found													$SOURCENAME = $MATCHES[1] -replace "`r`n$" -replace "`r$" -replace '\"'													# store content of file in variable													$FILEDATA = $_.Substring($_.IndexOf("`r`n`r`n") + 4) -replace "`r`n$"												}											}										}										else										{ # look for other headers (we need "filepath" to know where to store the file)
-											if ($_.Substring(0, $_.IndexOf("`r`n`r`n")) -match "Content-Disposition: form-data; name=(.*)")											{ # header found												$HEADERNAME = $MATCHES[1] -replace '\"'												# headername "filepath"?												if ($HEADERNAME -eq "filepath")												{ # yes, look for target filename													$FILENAME = $_.Substring($_.IndexOf("`r`n`r`n") + 4) -replace "`r`n$" -replace "`r$" -replace '\"'												}											}										}									}								}							}								if ($SOURCENAME -ne "")								{ # only upload if source file exists									# check or construct a valid filename to store									$TARGETNAME = ""                       									try {										# ... save file with the same encoding as received
+        	"POST /upload"
+
+			{ # upload file
+
+				# only if there is body data in the request
+				if ($HttpRequest.HasEntityBody)
+				{
+					# set default message to error message (since we just stop processing on error)
+					$ResponseBuffer = "Received corrupt or incomplete form data"
+					# check content type
+
+					if ($HttpRequest.ContentType)
+					{
+						# retrieve boundary marker for header separation
+						$BOUNDARY = $NULL
+						if ($HttpRequest.ContentType -match "boundary=(.*);")
+						{	$BOUNDARY = "--" + $MATCHES[1] }
+						else
+						{ # marker might be at the end of the line
+							if ($HttpRequest.ContentType -match "boundary=(.*)$")
+							{ $BOUNDARY = "--" + $MATCHES[1] }
+						}
+						if ($BOUNDARY)
+						{ # only if header separator was found
+							# read complete header (inkl. file data) into string
+							$READER = New-Object System.IO.StreamReader($HttpRequest.InputStream, $HttpRequest.ContentEncoding)
+							$DATA = $READER.ReadToEnd()
+							$READER.Close()
+							$HttpRequest.InputStream.Close()
+							# variables for filenames
+							$FILENAME = ""
+							$SOURCENAME = ""
+							# separate headers by boundary string
+							$DATA -replace "$BOUNDARY--\r\n", "$BOUNDARY`r`n--" -split "$BOUNDARY\r\n" | % {
+
+								# omit leading empty header and end marker header
+								if (($_ -ne "") -and ($_ -ne "--"))
+								{
+									# only if well defined header (seperation between meta data and data)
+									if ($_.IndexOf("`r`n`r`n") -gt 0)
+									{
+										# header data before two CRs is meta data
+										# first look for the file in header "filedata"
+										if ($_.Substring(0, $_.IndexOf("`r`n`r`n")) -match "Content-Disposition: form-data; name=(.*);")
+										{
+											$HEADERNAME = $MATCHES[1] -replace '\"'
+											# headername "filedata"?
+											if ($HEADERNAME -eq "filedata")
+											{ # yes, look for source filename
+												if ($_.Substring(0, $_.IndexOf("`r`n`r`n")) -match "filename=(.*)")
+												{ # source filename found
+													$SOURCENAME = $MATCHES[1] -replace "`r`n$" -replace "`r$" -replace '\"'
+													# store content of file in variable
+													$FILEDATA = $_.Substring($_.IndexOf("`r`n`r`n") + 4) -replace "`r`n$"
+												}
+											}
+										}
+										else
+										{ # look for other headers (we need "filepath" to know where to store the file)
+
+											if ($_.Substring(0, $_.IndexOf("`r`n`r`n")) -match "Content-Disposition: form-data; name=(.*)")
+											{ # header found
+												$HEADERNAME = $MATCHES[1] -replace '\"'
+												# headername "filepath"?
+												if ($HEADERNAME -eq "filepath")
+												{ # yes, look for target filename
+													$FILENAME = $_.Substring($_.IndexOf("`r`n`r`n") + 4) -replace "`r`n$" -replace "`r$" -replace '\"'
+												}
+											}
+										}
+									}
+								}
+							}
+								if ($SOURCENAME -ne "")
+								{ # only upload if source file exists
+									# check or construct a valid filename to store
+									$TARGETNAME = ""
+                       
+									try {
+										# ... save file with the same encoding as received
                           
-                                        $TARGETNAME = "$webRoot\" + $SOURCENAME										[IO.File]::WriteAllText($TARGETNAME, $FILEDATA, $HttpRequest.ContentEncoding)
+                                        $TARGETNAME = "$webRoot\" + $SOURCENAME
+										[IO.File]::WriteAllText($TARGETNAME, $FILEDATA, $HttpRequest.ContentEncoding)
                                     }
 									catch	{}
 									if ($Error.Count -gt 0)
@@ -137,11 +218,14 @@ While ($HttpListener.IsListening) {
 				else
 				{
 					$ResponseBuffer = "No client data received"
-				}                $ResponseBuffer = [System.Text.Encoding]::UTF8.GetBytes($ResponseBuffer)
+				}
+                $ResponseBuffer = [System.Text.Encoding]::UTF8.GetBytes($ResponseBuffer)
 				break
 			}
 
-  default {$HttpResponse.Close()           break}
+  default {$HttpResponse.Close()
+   
+        break}
     }
  
             $HttpResponse.StatusCode = 200
