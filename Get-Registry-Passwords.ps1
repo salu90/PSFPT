@@ -1,4 +1,4 @@
-﻿## Powershell For Penetration Testers Exam Task 4 - Write a registry scrapper which looks for passwords stored in Windows Registry
+## Powershell For Penetration Testers Exam Task 4 - Write a registry scrapper which looks for passwords stored in Windows Registry
 function Get-Registry-Passwords
 { 
 <#
@@ -326,6 +326,22 @@ Student ID: PSP-3190
     }
        
     function Get-Generic(){
-        reg query HKLM /f password /t REG_SZ /s        reg query HKCU /f password /t REG_SZ /s
+        reg query HKLM /f password /t REG_SZ /s
+        reg query HKCU /f password /t REG_SZ /s
     }
-    if ($lsasecret -Or $all) {        Get-LsaSecret    }    if ($autologon -Or $all) {        Get-RegAutoLogon    }     if ($generic -Or $all) {        Get-Generic    }     if ((-Not $generic) -And (-Not $all) -And (-Not $autologon) -And (-Not $lsasecret)) {        Write-Host "Choose at least one parameter: lsasecret, autologon, generic, all" -foregroundColor Red    }}
+
+    if ($lsasecret -Or $all) {
+        Get-LsaSecret
+    }
+    if ($autologon -Or $all) {
+        Get-RegAutoLogon
+    }
+     if ($generic -Or $all) {
+        Get-Generic
+    }
+
+     if ((-Not $generic) -And (-Not $all) -And (-Not $autologon) -And (-Not $lsasecret)) {
+        Write-Host "Choose at least one parameter: lsasecret, autologon, generic, all" -foregroundColor Red
+    }
+
+}
